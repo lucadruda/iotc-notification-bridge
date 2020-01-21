@@ -9,7 +9,7 @@ To use the notification bridge solution, you will need the following:
 - an Azure IoT Central application to connect the devices. Create a free app by following [these instructions](https://docs.microsoft.com/en-us/azure/iot-central/quick-deploy-iot-central)
 - Either a Google Firebase API Key, an Apple Push Notification certificate or both for project credentials (see [Get Credentials](#get-credentials) for instructions).
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Flucadruda%2Freleases%2Fmaster%2Fazuredeploy.json)
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Flucadruda%2Fiotc-notification-bridge%2Fmaster%2Fazuredeploy.json)
 
 ## Instructions
 Take the following steps to deploy an Azure Function into your subscription and set up the notification bridge.

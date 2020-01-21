@@ -34,7 +34,7 @@
         "signalrName": "[concat('iotcnhsr-',uniqueString(resourceGroup().id))]",
         "hostingPlanName": "[concat('iotcnhpl-',uniqueString(resourceGroup().id))]",
         "storageAccountName": "[concat('iotcnhsa',uniqueString(resourceGroup().id))]",
-        "functionCodeUrl": "https://github.com/lucadruda/releases/raw/master/azure-fn.zip",
+        "functionCodeUrl": "https://github.com/lucadruda/iotc-notification-bridge/raw/master/iotc-notification-bridge.zip",
         "appleAvailable": "[and(not(empty(parameters('appleApiCertificate'))),not(empty(parameters('appleApiCertificateKey'))))]",
         "googleAvailable": "[not(empty(parameters('googleApiKey')))]",
         "gcmCredentialsObj": {
