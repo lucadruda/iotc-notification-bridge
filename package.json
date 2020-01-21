@@ -9,7 +9,7 @@
     "start": "func start",
     "test": "echo \"No tests yet...\"",
     "create-zip": "npm install && bestzip iotc-notification-bridge.zip messages/* negotiate/* node_modules/ package.json package-lock.json proxies.json host.json",
-    "commit-zip": "git add iotc-notification-bridge.zip && git commit -m \"update archive\" && git push"
+    "commit-zip": "git add iotc-notification-bridge.zip && git commit -m \"update archive\""
   },
   "husky": {
     "hooks": {
