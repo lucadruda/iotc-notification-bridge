@@ -1,0 +1,236 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sku": {
+            "type": "string",
+            "allowedValues": [
+                "Free",
+                "Basic",
+                "Standard"
+            ]
+        },
+        "googleApiKey": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "appleApiCertificate": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "appleApiCertificateKey": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "appleApiProduction": {
+            "type": "bool",
+            "defaultValue": false
+        }
+    },
+    "variables": {
+        "notificationHubName": "[concat('iotcnhn-',uniqueString(resourceGroup().id))]",
+        "notificationNamespaceName": "[concat('iotcnhhub-',uniqueString(resourceGroup().id))]",
+        "functionName": "[concat('iotcnhfn-',uniqueString(resourceGroup().id))]",
+        "signalrName": "[concat('iotcnhsr-',uniqueString(resourceGroup().id))]",
+        "hostingPlanName": "[concat('iotcnhpl-',uniqueString(resourceGroup().id))]",
+        "storageAccountName": "[concat('iotcnhsa',uniqueString(resourceGroup().id))]",
+        "functionCodeUrl": "https://github.com/lucadruda/releases/raw/master/azure-fn.zip",
+        "appleAvailable": "[and(not(empty(parameters('appleApiCertificate'))),not(empty(parameters('appleApiCertificateKey'))))]",
+        "googleAvailable": "[not(empty(parameters('googleApiKey')))]",
+        "gcmCredentialsObj": {
+            "gcmEndpoint": "https://android.googleapis.com/gcm/send",
+            "googleApiKey": "[parameters('googleApiKey')]"
+        },
+        "apnsCredentialObj": {
+            "apnsCertificate": "[parameters('appleApiCertificate')]",
+            "certificateKey": "[parameters('appleApiCertificateKey')]",
+            "endpoint": "[if(parameters('appleApiProduction'),'gateway.push.apple.com','gateway.sandbox.push.apple.com')]"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2019-06-01",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "apiVersion": "2017-04-01",
+            "name": "[variables('notificationNamespaceName')]",
+            "type": "Microsoft.NotificationHubs/namespaces",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "name": "[variables('notificationNamespaceName')]",
+                "region": "[resourceGroup().location]",
+                "namespaceType": 1
+            },
+            "sku": {
+                "name": "[parameters('sku')]"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2017-04-01",
+                    "name": "[variables('notificationHubName')]",
+                    "type": "notificationHubs",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[concat('Microsoft.NotificationHubs/namespaces/', variables('notificationNamespaceName'))]"
+                    ],
+                    "properties": {
+                        "name": "[variables('notificationHubName')]",
+                        "gcmCredential": "[if(variables('googleAvailable'),variables('gcmCredentialsObj'),json('null'))]",
+                        "apnsCredential": "[if(variables('appleAvailable'),variables('apnsCredentialObj'),json('null'))]"
+                    },
+                    "sku": {
+                        "name": "[parameters('sku')]"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.SignalRService/SignalR",
+            "name": "[variables('signalrName')]",
+            "apiVersion": "2018-10-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "hostNamePrefix": "[variables('signalrName')]",
+                "features": [
+                    {
+                        "flag": "ServiceMode",
+                        "value": "Serverless"
+                    },
+                    {
+                        "flag": "EnableConnectivityLogs",
+                        "value": true
+                    }
+                ]
+            },
+            "sku": {
+                "name": "Standard_S1",
+                "tier": "Standard",
+                "capacity": "1"
+            }
+        },
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[variables('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[resourceGroup().location]",
+            "kind": "",
+            "tags": {},
+            "dependsOn": [],
+            "properties": {
+                "name": "[variables('hostingPlanName')]",
+                "workerSize": "0",
+                "workerSizeId": "0",
+                "numberOfWorkers": "1",
+                "hostingEnvironment": ""
+            },
+            "sku": {
+                "Tier": "Dynamic",
+                "Name": "Y1"
+            }
+        },
+        {
+            "apiVersion": "2019-08-01",
+            "name": "[variables('functionName')]",
+            "type": "Microsoft.Web/sites",
+            "kind": "functionapp",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "tags": {},
+            "dependsOn": [
+                "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[concat('Microsoft.SignalRService/SignalR/', variables('signalrName'))]",
+                "[resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs', variables('notificationNamespaceName'), variables('notificationHubName'))]"
+            ],
+            "properties": {
+                "name": "[variables('functionName')]",
+                "siteConfig": {
+                    "cors": {
+                        "allowedOrigins": [
+                            "*"
+                        ],
+                        "supportCredentials": false
+                    },
+                    "appSettings": [
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~2"
+                        },
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "node"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+                        },
+                        {
+                            "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                            "value": "~10"
+                        },
+                        {
+                            "name": "AzureSignalRConnectionString",
+                            "value": "[listKeys(resourceId('Microsoft.SignalRService/SignalR', variables('signalrName')), '2018-10-01').primaryConnectionString]"
+                        },
+                        {
+                            "name": "NotificationHubConnectionString",
+                            "value": "[listKeys(resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/authorizationRules', variables('notificationNamespaceName'), variables('notificationHubName'), 'DefaultFullSharedAccessSignature'), providers('Microsoft.NotificationHubs', 'namespaces/notificationHubs').apiVersions[0]).primaryConnectionString]"
+                        },
+                        {
+                            "name": "NotificationHubName",
+                            "value": "[variables('notificationHubName')]"
+                        }
+                    ]
+                },
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms',variables('hostingPlanName'))]"
+            },
+            "resources": [
+                {
+                    "name": "MSDeploy",
+                    "type": "Extensions",
+                    "location": "[resourceGroup().location]",
+                    "apiVersion": "2019-08-01",
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/sites/', variables('functionName'))]"
+                    ],
+                    "properties": {
+                        "packageUri": "[concat(variables('functionCodeUrl'))]"
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "notificationHubCString": {
+            "type": "string",
+            "value": "[listKeys(resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/authorizationRules', variables('notificationNamespaceName'), variables('notificationHubName'), 'DefaultListenSharedAccessSignature'), providers('Microsoft.NotificationHubs', 'namespaces/notificationHubs').apiVersions[0]).primaryConnectionString]"
+        },
+        "signalRNegotiationEndpoint": {
+            "type": "string",
+            "value": "[concat('https://',variables('functionName'),'.azurewebsites.net/api?code=',listkeys(concat(resourceId('Microsoft.Web/sites', variables('functionName')), '/host/default'), '2019-08-01').functionKeys.default)]"
+        },
+        "webHookEndpoint": {
+            "type": "string",
+            "value": "[concat('https://',variables('functionName'),'.azurewebsites.net/api/messages?code=',listkeys(concat(resourceId('Microsoft.Web/sites', variables('functionName')), '/host/default'), '2019-08-01').functionKeys.default)]"
+        },
+        "notificationHubName":{
+            "type": "string",
+            "value": "[variables('notificationHubName')]"
+        }
+    }
+}

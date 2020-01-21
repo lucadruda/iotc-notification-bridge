@@ -1,0 +1,29 @@
+{
+  "name": "keurig-notifications",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "tsc -p messages && tsc -p negotiate",
+    "watch": "tsc -w",
+    "start": "func start",
+    "test": "echo \"No tests yet...\"",
+    "create-zip": "npm install && bestzip iotc-notification-bridge.zip messages/* negotiate/* node_modules/ package.json package-lock.json proxies.json host.json",
+    "commit-zip": "git add iotc-notification-bridge.zip && git commit -m \"update archive\" && git push"
+  },
+  "husky": {
+    "hooks": {
+      "pre-push": "npm run create-zip && npm run commit-zip"
+    }
+  },
+  "dependencies": {
+    "azure-sb": "^0.11.1"
+  },
+  "devDependencies": {
+    "@azure/functions": "^1.0.2-beta2",
+    "@types/azure-sb": "0.0.37",
+    "bestzip": "^2.1.5",
+    "husky": "^4.0.10",
+    "typescript": "^3.3.3"
+  }
+}

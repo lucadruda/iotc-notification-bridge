@@ -1,0 +1,105 @@
+<html>
+
+<head>
+    <title>Azure IoTCentral Notification Bridge</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css">
+    <script>
+        window.apiBaseUrl = '[NEGOTIATION_ENDPOINT]';
+    </script>
+    <style>
+        .slide-fade-enter-active,
+        .slide-fade-leave-active {
+            transition: all 1s ease;
+        }
+
+        .slide-fade-enter,
+        .slide-fade-leave-to {
+            height: 0px;
+            overflow-y: hidden;
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <p>&nbsp;</p>
+    <div id="app" class="container">
+        <h3>
+            <img src="https://img.favpng.com/5/13/0/iphone-7-push-technology-apple-push-notification-service-computer-icons-png-favpng-mbPzWHJY05m5dHAWYMuKUwsik.jpg"
+                height="68px" width="68px" role="presentation" data-linktype="external">
+            &nbsp;&nbsp;Azure IoTCentral Notification Bridge&nbsp;&nbsp;
+        </h3>
+        <div class="row" v-if="ready">
+            <div class="signalr-demo col-sm">
+                <hr />
+                <p>Available devices...</p>
+                <p id="device1" class="device">device1</p>
+                <p id="device2" class="device">device2</p>
+                <p id="device3" class="device">device3</p>
+
+            </div>
+        </div>
+        <div v-if="ready">
+            <transition-group name="slide-fade" tag="div">
+                <div class="row" v-for="message in messages" v-bind:key="message.id">
+                    <div class="col-sm">
+                        <hr />
+                        <div>
+                            <div style="display: inline-block; padding-left: 12px;">
+                                <div>
+                                    <span class="text-info small"><strong id='statusMsg'></strong></span>
+                                </div>
+                                <div>
+                                    <p id='progressMsg'></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        </transition-group>
+    </div>
+
+    <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/aspnet-signalr/1.1.4/signalr.js"></script> -->
+    <script src="./signalr.js"></script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/axios@0.18.0/dist/axios.min.js"></script> -->
+
+    <script>
+        const device = document.querySelectorAll('.device');
+        const statusMsg = document.querySelector('#statusMsg');
+        const progressMsg = document.querySelector('#progressMsg');
+        let signalRConnection;
+
+        const onMessage = (msg) => {
+            progressMsg.textContent = progressMsg.textContent + msg + '\n';
+        }
+        device.forEach(dev => {
+            dev.style.cursor = "pointer";
+            dev.style.textDecoration = "underline";
+            dev.onclick = async function () {
+                statusMsg.textContent = 'Connecting ...';
+                const intId = setInterval(function () {
+                    statusMsg.textContent = statusMsg.textContent + '.';
+                }, 1000);
+                const connectionsignalRConnection = new signalR.HubConnectionBuilder()
+                    .withUrl(`${apiBaseUrl}&username=${dev.textContent}`, { jsonp: true, withCredentials: false })
+                    .configureLogging(signalR.LogLevel.Debug)
+                    .build();
+                try {
+                    connectionsignalRConnection.on('newMessage', onMessage);
+                    await connectionsignalRConnection.start({withCredentials:false});
+                    clearInterval(intId);
+                    statusMsg.textContent = 'Connected!';
+                }
+                catch (err) {
+                    console.error(err);
+                }
+            }
+        })
+
+
+    </script>
+</body>
+
+</html>
