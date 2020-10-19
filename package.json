@@ -22,8 +22,8 @@
   "devDependencies": {
     "@azure/functions": "^1.0.2-beta2",
     "@types/azure-sb": "0.0.37",
-    "bestzip": "^2.1.5",
-    "husky": "^4.0.10",
-    "typescript": "^3.3.3"
+    "bestzip": "^2.1.7",
+    "husky": "^4.3.0",
+    "typescript": "^4.0.3"
   }
 }
